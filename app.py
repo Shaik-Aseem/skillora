@@ -8,6 +8,7 @@ from functools import wraps
 from models import db, User, Resume, Analysis, Progress, Job, JobApplication
 from utils.pdf_parser import extract_text_from_pdf
 from utils.analyzer import analyze_resume
+from services.job_api import fetch_real_jobs
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-for-auth-production'
@@ -26,11 +27,11 @@ with app.app_context():
     # Auto-seed mock jobs
     if not Job.query.first():
         dummy_jobs = [
-            {"title": "Software Engineer", "company": "TechNova", "location": "Remote", "salary": "$120k", "description": "Looking for a Python/React developer.", "required_skills": '["Python", "React", "SQL"]'},
-            {"title": "Machine Learning Engineer", "company": "AI Dynamics", "location": "New York, NY", "salary": "$150k", "description": "Build predictive models.", "required_skills": '["Python", "Machine Learning", "TensorFlow", "SQL"]'},
-            {"title": "Data Analyst", "company": "FinData", "location": "Chicago, IL", "salary": "$90k", "description": "Analyze financial data trends.", "required_skills": '["SQL", "Python", "Tableau", "Excel"]'},
-            {"title": "Frontend Developer", "company": "Pixel Web", "location": "San Francisco, CA", "salary": "$110k", "description": "Create stunning user interfaces.", "required_skills": '["Javascript", "React", "CSS", "HTML5"]'},
-            {"title": "Backend Systems Architect", "company": "CloudScale", "location": "Austin, TX", "salary": "$140k", "description": "Design scalable infrastructure.", "required_skills": '["Python", "FastAPI", "Docker", "System Design", "AWS"]'},
+            {"title": "Software Engineer", "company": "TechNova", "location": "Remote", "salary": "$120k", "description": "Looking for a Python/React developer.", "required_skills": '["Python", "React", "SQL"]', "apply_link": "#"},
+            {"title": "Machine Learning Engineer", "company": "AI Dynamics", "location": "New York, NY", "salary": "$150k", "description": "Build predictive models.", "required_skills": '["Python", "Machine Learning", "TensorFlow", "SQL"]', "apply_link": "#"},
+            {"title": "Data Analyst", "company": "FinData", "location": "Chicago, IL", "salary": "$90k", "description": "Analyze financial data trends.", "required_skills": '["SQL", "Python", "Tableau", "Excel"]', "apply_link": "#"},
+            {"title": "Frontend Developer", "company": "Pixel Web", "location": "San Francisco, CA", "salary": "$110k", "description": "Create stunning user interfaces.", "required_skills": '["Javascript", "React", "CSS", "HTML5"]', "apply_link": "#"},
+            {"title": "Backend Systems Architect", "company": "CloudScale", "location": "Austin, TX", "salary": "$140k", "description": "Design scalable infrastructure.", "required_skills": '["Python", "FastAPI", "Docker", "System Design", "AWS"]', "apply_link": "#"},
         ]
         for j in dummy_jobs:
             db.session.add(Job(**j))
@@ -279,28 +280,51 @@ def download_report():
 @login_required
 def jobs_feed():
     user = User.query.get(session['user_id'])
-    jobs = Job.query.all()
+    
     analysis = get_latest_analysis_or_dummy(user.id)
+    user_role = analysis.role if analysis and hasattr(analysis, 'role') and analysis.role else "software engineer"
     user_skills = set(json.loads(analysis.skills)) if analysis and hasattr(analysis, 'skills') and analysis.skills else set()
     
+    # 1. Fetch Real Jobs from API
+    api_jobs = fetch_real_jobs(role=user_role, limit=12)
+    
+    # 2. Iterate, Sync DB, Score Output
     feed_jobs = []
-    for job in jobs:
-        req_skills = set(json.loads(job.required_skills)) if job.required_skills else set()
+    for apt in api_jobs:
+        job_record = Job.query.filter_by(title=apt['title'], company=apt['company']).first()
+        if not job_record:
+            job_record = Job(title=apt['title'], company=apt['company'], location=apt['location'], salary=apt['salary'], description=apt['description'], required_skills=apt['required_skills'], apply_link=apt.get('apply_link', ''))
+            db.session.add(job_record)
+            db.session.commit()
+            
+        req_skills = set(json.loads(job_record.required_skills)) if job_record.required_skills else set()
         matched = user_skills.intersection(req_skills)
         missing = req_skills - user_skills
-        match_score = int((len(matched) / len(req_skills)) * 100) if len(req_skills) > 0 else 100
         
-        application = JobApplication.query.filter_by(user_id=user.id, job_id=job.id).first()
+        # Phase 3: Advanced Match Math
+        skill_pct = (len(matched) / len(req_skills)) if len(req_skills) > 0 else 1
+        skill_score = 0.5 * skill_pct
+        role_score = 0.2 if user_role.lower() in job_record.title.lower() else 0.05
+        desc_words = set(job_record.description.lower().split())
+        matched_kws = user_skills.intersection(desc_words)
+        kw_score = 0.2 * min((len(matched_kws) / max(len(req_skills), 1)), 1.0)
+        exp_score = 0.1 # Static for now
+        
+        total_score = int((skill_score + role_score + kw_score + exp_score) * 100)
+        total_score = min(total_score, 100)
+        
+        application = JobApplication.query.filter_by(user_id=user.id, job_id=job_record.id).first()
         
         feed_jobs.append({
-            'job': job,
+            'job': job_record,
             'matched': list(matched),
             'missing': list(missing),
             'req_skills': list(req_skills),
-            'match_score': match_score,
+            'match_score': total_score,
             'status': application.status if application else None,
             'applied': application is not None
         })
+    
     feed_jobs.sort(key=lambda x: x['match_score'], reverse=True)
     return render_template('jobs.html', user=user, feed_jobs=feed_jobs, active_page='jobs')
 
@@ -348,13 +372,12 @@ def chat_bot():
     data = request.json
     msg = data.get('message', '').lower()
     
-    reply = "I'm your AI Career Coach. I can analyze your resume, suggest skills, or help match you to roles!"
-    if "skills" in msg or "learn" in msg:
-         reply = "Based on current market demand, I highly recommend expanding into modern frameworks like React and Cloud architecture (AWS/Docker)."
-    elif "improve" in msg or "resume" in msg:
-         reply = "Pro tip: Convert passive statements into actionable achievements. Replace 'Helped with a website' to 'Engineered a full-stack platform decreasing latency by 20%'."
-    elif "rejected" in msg or "not getting" in msg:
-         reply = "ATS engines act as strict keyword filters. Always match your resume's terminology exactly to the job description keywords for the highest conversion probability."
+    user = User.query.get(session['user_id'])
+    analysis = get_latest_analysis_or_dummy(user.id)
+    skills = analysis.skills if analysis and hasattr(analysis, 'skills') else ""
+    
+    from services.ai_engine import chat_response
+    reply = chat_response(msg, skills)
          
     return jsonify({'reply': reply})
 

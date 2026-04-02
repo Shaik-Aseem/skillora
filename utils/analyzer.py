@@ -1,6 +1,6 @@
 import re
+from services.ai_engine import analyze_resume_text, suggest_improvements
 
-# Mock roles for skill gap
 ROLES = {
     'Software Engineer': {
         'skills': ['python', 'java', 'javascript', 'react', 'node', 'sql', 'git', 'docker', 'aws', 'api', 'flask', 'django', 'html', 'css', 'agile', 'linux'],
@@ -16,27 +16,31 @@ ROLES = {
 def analyze_resume(text, role):
     text_lower = text.lower()
     
-    target_skills = ROLES.get(role, ROLES['Software Engineer'])['skills']
+    # 1. Use Gemini for dynamic parsing
+    ai_data = analyze_resume_text(text)
     
+    target_skills = ROLES.get(role, ROLES['Software Engineer'])['skills'].copy()
+    
+    # Blend AI skills into targeted skills logic
+    dynamic_skills = set([s.lower() for s in ai_data.get('skills', [])])
+    for s in dynamic_skills:
+        if s not in target_skills:
+            target_skills.append(s)
+            
     found_skills = []
     missing_skills = []
     
     for skill in target_skills:
-        # Simple word boundary regex search
-        if re.search(r'\b' + re.escape(skill) + r'\b', text_lower):
-            found_skills.append(skill.title())
-        elif re.search(r'\b' + re.escape(skill.replace(' ', '')) + r'\b', text_lower):
-            found_skills.append(skill.title())
+        if re.search(r'\b' + re.escape(skill) + r'\b', text_lower) or re.search(r'\b' + re.escape(skill.replace(' ', '')) + r'\b', text_lower):
+            found_skills.append(skill.upper() if len(skill) <= 3 else skill.title())
         else:
-            missing_skills.append(skill.title())
+            missing_skills.append(skill.upper() if len(skill) <= 3 else skill.title())
             
-    # Calculate score
     score = int((len(found_skills) / len(target_skills)) * 100) if target_skills else 0
-    score = min(score + 10, 95) # Boost mock score slightly for demo purposes
+    score = min(score + 10, 95)
     
-    # Mock projects/education detection simply by checking for keywords
-    has_education = any(word in text_lower for word in ['education', 'university', 'college', 'degree', 'bachelor', 'master'])
-    has_projects = any(word in text_lower for word in ['project', 'projects', 'portfolio', 'github'])
+    # 2. Use AI for deep text-based suggestions
+    ai_suggestions = suggest_improvements(text)
     
     roadmaps = []
     if missing_skills:
@@ -48,32 +52,20 @@ def analyze_resume(text, role):
         if len(missing_skills) > 3:
             roadmaps.append({
                 'week': 'Week 3-4',
-                'title': 'Advanced skills',
+                'title': 'Advanced mechanics',
                 'tasks': [f"Learn {skill}" for skill in missing_skills[3:6]]
             })
             
-    suggestions = []
-    if not has_education:
-        suggestions.append("Add a clear Education section with your degree and university.")
-    if not has_projects:
-        suggestions.append("Add a Projects section highlighting relevant technical projects.")
-    
-    if score < 50:
-        suggestions.append(f"Consider learning core {role} skills like {', '.join(missing_skills[:3])}. Try taking an online course to get familiar with them.")
-    else:
-        suggestions.append("Your skills match the role fairly well! Focus on building projects highlighting these skills.")
-    suggestions.append("Use strong action verbs such as 'Developed', 'Engineered', and 'Architected'.")
-    
     return {
         'score': score,
         'breakdown': {
             'skills_match': score,
             'keywords': min(score + 15, 100),
-            'experience': min(score + 20, 100) if has_projects else 40,
-            'formatting': 85  # Hardcoded mock
+            'experience': min(score + 20, 100) if score > 50 else 40,
+            'formatting': 85
         },
-        'found_skills': found_skills,
-        'missing_skills': missing_skills,
+        'found_skills': list(set(found_skills)),
+        'missing_skills': list(set(missing_skills)),
         'roadmap': roadmaps,
-        'suggestions': suggestions
+        'suggestions': ai_suggestions
     }

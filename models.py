@@ -41,6 +41,7 @@ class Job(db.Model):
     salary = db.Column(db.String(100), nullable=True)
     description = db.Column(db.Text, nullable=False)
     required_skills = db.Column(db.Text, nullable=False) # JSON string
+    apply_link = db.Column(db.String(500), nullable=True)
     matches = db.relationship('JobApplication', backref='job', lazy=True)
 
 class JobApplication(db.Model):
