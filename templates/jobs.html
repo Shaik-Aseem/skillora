@@ -47,7 +47,8 @@
 
         <div class="mt-2 text-sm"
             style="padding:10px; background:rgba(99,102,241,0.05); border-radius:6px; border-left:3px solid var(--primary-color);">
-            <strong>Match Explanation:</strong> {{ j.match_explanation }}
+            <div style="margin-bottom:0.5rem;"><strong>Match Explanation:</strong> {{ j.match_explanation }}</div>
+            <div><strong>Why You Should Apply:</strong> {{ j.why_apply }}</div>
         </div>
 
         <div>
@@ -82,7 +83,8 @@
                         class="ri-bookmark-line"></i> Save</button>
                 {% endif %}
                 <button class="btn btn-primary smart-apply-btn"
-                    onclick="openApplyModal({{ j.job.id }}, {{ j.match_score }}, '{{ j.job.apply_link }}')">Smart Apply
+                    onclick="openApplyModal({{ j.job.id }}, {{ j.match_score }}, {{ j.ats_probability }}, '{{ j.missing|join(', ') }}', '{{ j.job.apply_link }}')">Smart
+                    Apply
                     <i class="ri-send-plane-fill"></i></button>
                 {% else %}
                 <a href="{{ url_for('applications') }}" class="btn btn-secondary">View ATS Tracker</a>
@@ -104,14 +106,18 @@
         <div class="text-center mb-4">
             <h3 class="mb-2">Your Readiness Score</h3>
             <h1 class="text-primary" id="modal-score" style="font-size:3rem; font-weight:800;">0%</h1>
-            <p class="text-sm opacity-70 mt-2">AI engines recommend > 75% for high probability callbacks.</p>
+
+            <div
+                style="background: rgba(99,102,241,0.1); padding:1rem; border-radius:10px; margin-top:1rem; text-align:left;">
+                <p class="font-medium"><i class="ri-bar-chart-box-line"></i> ATS Success Probability: <strong
+                        id="modal-ats-prob" class="text-success"></strong></p>
+                <p class="text-sm opacity-70 mt-2" id="modal-improvement-sugg"></p>
+            </div>
         </div>
         <div style="display:flex; gap:1rem; margin-top:2rem;">
             <button class="btn btn-secondary w-100" onclick="closeApplyModal()">Cancel</button>
             <button class="btn btn-primary w-100" id="apply-anyway-btn">Apply Anyway <i
                     class="ri-send-plane-fill"></i></button>
-            <button class="btn btn-accent w-100" id="improve-apply-btn">Improve Resume & Apply <i
-                    class="ri-magic-line"></i></button>
         </div>
     </div>
 </div>
@@ -120,20 +126,24 @@
     let currentJobId = null;
     let currentApplyLink = null;
 
-    function openApplyModal(jobId, score, applyLink) {
+    function openApplyModal(jobId, matchScore, atsProb, missingString, link) {
         currentJobId = jobId;
-        currentApplyLink = applyLink;
+        currentApplyLink = link;
+
+        document.getElementById('modal-score').textContent = matchScore + "%";
+        document.getElementById('modal-ats-prob').textContent = atsProb + "%";
+
+        let improvementHTML = missingString.length > 0
+            ? `To boost ATS callback probability, add <strong>${missingString}</strong> into your experience keywords before sending.`
+            : `Your resume is already highly optimized for the target keywords. Send it natively!`;
+
+        document.getElementById('modal-improvement-sugg').innerHTML = improvementHTML;
+
         const modal = document.getElementById('apply-modal');
-        const content = document.getElementById('apply-modal-content');
-        const modalScore = document.getElementById('modal-score');
-
-        modalScore.textContent = score + '%';
-        modalScore.className = score >= 75 ? 'text-success' : 'text-danger';
-
-        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
         setTimeout(() => {
             modal.style.opacity = '1';
-            content.style.transform = 'scale(1)';
+            document.getElementById('apply-modal-content').style.transform = 'scale(1)';
         }, 10);
     }
 

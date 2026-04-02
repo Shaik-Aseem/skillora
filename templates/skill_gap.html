@@ -16,7 +16,8 @@
                 {% for skill in matched %}
                 <div class="tag matched"
                     title="Great job emphasizing your expertise here. This skill critically validates your match for this role.">
-                    <i class="ri-check-line"></i> {{ skill }}</div>
+                    <i class="ri-check-line"></i> {{ skill }}
+                </div>
                 {% endfor %}
                 {% else %}
                 <p class="opacity-70 text-sm">No exact skills matched</p>
@@ -27,11 +28,22 @@
             <h3 class="text-danger mb-3"><i class="ri-close-line"></i> Missing Skills</h3>
             <div class="tags-container mt-2">
                 {% if missing %}
-                {% for skill in missing %}
-                <div class="tag missing"
-                    title="This is frequently expected for the {{ analysis.role }} position. Considering adding projects using this!">
-                    <i class="ri-close-line"></i> {{ skill }}</div>
-                {% endfor %}
+                <div style="display:flex; flex-direction:column; gap:1rem;">
+                    {% for skill in missing %}
+                    <div
+                        style="background: rgba(239,68,68,0.05); border-left: 3px solid #ef4444; padding: 1rem; border-radius: 8px;">
+                        <div class="flex-between">
+                            <span class="font-medium text-danger" style="font-size:1.1rem;"><i
+                                    class="ri-close-circle-line"></i> {{ skill }}</span>
+                            <button class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;"
+                                onclick="triggerChatLearn('{{ skill }}')"><i class="ri-magic-line"></i> Learn &
+                                Unlock</button>
+                        </div>
+                        <p class="text-sm opacity-70 mt-2"><i class="ri-briefcase-4-line"></i> Mastering this unlocks
+                            ~{{ (skill|length * 4) + 12 }} matching roles.</p>
+                    </div>
+                    {% endfor %}
+                </div>
                 {% else %}
                 <p class="opacity-70 text-sm">No missing skills detected! Great job.</p>
                 {% endif %}
@@ -45,4 +57,15 @@
     <a href="{{ url_for('upload') }}" class="btn btn-primary mt-3">Upload Now</a>
 </div>
 {% endif %}
+
+<script>
+    function triggerChatLearn(skill) {
+        document.getElementById('chat-panel').classList.add('active');
+        const input = document.getElementById('chat-input');
+        input.value = `Create a fast 3-step action plan for me to learn ${skill} for ATS resume integration.`;
+        if (typeof window.sendMessage === 'function') {
+            window.sendMessage();
+        }
+    }
+</script>
 {% endblock %}

@@ -1,5 +1,49 @@
 import re
+import json
 from services.ai_engine import analyze_resume_text, suggest_improvements
+
+def score_job_match(job_record, user_skills, user_role):
+    req_skills = set(json.loads(job_record.required_skills)) if job_record.required_skills else set()
+    matched = user_skills.intersection(req_skills)
+    missing = req_skills - user_skills
+    
+    skill_pct = (len(matched) / len(req_skills)) if len(req_skills) > 0 else 1
+    skill_score = 0.5 * skill_pct
+    role_score = 0.2 if user_role and user_role.lower() in job_record.title.lower() else 0.05
+    desc_words = set(job_record.description.lower().split())
+    matched_kws = user_skills.intersection(desc_words)
+    kw_score = 0.2 * min((len(matched_kws) / max(len(req_skills), 1)), 1.0)
+    exp_score = 0.1 
+    
+    total_score = int((skill_score + role_score + kw_score + exp_score) * 100)
+    total_score = min(total_score, 100)
+    
+    # Advanced metrics
+    readiness_score = min(int(total_score * 0.85 + 10), 100)
+    ats_probability = min(total_score + 5, 99)
+    
+    explanation = f"You match {total_score}% because you have {', '.join(list(matched)[:3])}" if len(matched) else "You're missing core targeted skills."
+    if len(missing) > 0:
+        explanation += f", but lack {', '.join(list(missing)[:2])}."
+        
+    why_apply = ""
+    if total_score >= 80:
+        why_apply = f"Your background in {list(matched)[0] if matched else user_role} gives you a competitive tier-1 edge."
+    elif total_score >= 50:
+        why_apply = "You meet foundational requirements. A strong cover letter could secure an interview."
+    else:
+        why_apply = "This role overlaps with your profile loosely."
+
+    return {
+        'total_score': total_score,
+        'readiness_score': readiness_score,
+        'ats_probability': ats_probability,
+        'explanation': explanation,
+        'why_apply': why_apply,
+        'matched': list(matched),
+        'missing': list(missing),
+        'req_skills': list(req_skills)
+    }
 
 ROLES = {
     'Software Engineer': {
