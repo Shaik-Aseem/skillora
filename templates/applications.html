@@ -1,0 +1,41 @@
+{% extends "base_dashboard.html" %}
+{% block title %}My Applications - Skillora OS{% endblock %}
+{% block heading %}ATS Tracker{% endblock %}
+
+{% block content %}
+<div class="glass-card mb-4 mt-2">
+    <h2><i class="ri-folder-user-line text-primary"></i> Application Tracking System</h2>
+    <p class="opacity-70 text-sm">Monitor your job flow, AI parsing phases, and recruitment statuses.</p>
+</div>
+
+{% if apps_data|length == 0 %}
+<div class="glass-card p-4 text-center mt-4 fade-in-up">
+    <h2>No applications yet.</h2>
+    <p class="opacity-70 mt-2 mb-4">Start browsing the intelligent job cache to deploy your resume.</p>
+    <a href="{{ url_for('jobs_feed') }}" class="btn btn-primary btn-large">Browse AI Jobs Feed <i
+            class="ri-arrow-right-line"></i></a>
+</div>
+{% else %}
+<div class="dashboard-grid">
+    {% for app in apps_data %}
+    <div class="glass-card hover-lift">
+        <div class="flex-between mb-3">
+            <h3 style="font-size:1.2rem;">{{ app.job.title }}</h3>
+            <span class="tag matched"><i class="ri-checkbox-circle-line"></i> {{ app.status }}</span>
+        </div>
+        <p class="text-sm font-medium opacity-70 mb-2"><i class="ri-building-line"></i> {{ app.job.company }}</p>
+
+        <div class="mt-4" style="background:rgba(128,128,128,0.05); padding:1rem; border-radius:10px;">
+            <p class="text-sm font-medium mb-1">AI Match Configuration</p>
+            <div class="progress-bar-container mb-2">
+                <div class="progress-bar" style="background:var(--primary); width:{{ app.match_score }}%;"></div>
+            </div>
+            <p class="text-sm opacity-70" style="text-align:right;">{{ app.match_score }}% Match</p>
+        </div>
+
+        <p class="text-sm opacity-70 mt-4"><i class="ri-calendar-line"></i> Logged: {{ app.applied_at }}</p>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

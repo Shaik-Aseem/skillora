@@ -13,6 +13,7 @@ class User(db.Model):
     analyses = db.relationship('Analysis', backref='user', lazy=True)
     progress = db.relationship('Progress', backref='user', lazy=True)
     applications = db.relationship('JobApplication', backref='user', lazy=True)
+    saved_jobs = db.relationship('SavedJob', backref='user', lazy=True)
 
 class Resume(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -51,3 +52,9 @@ class JobApplication(db.Model):
     status = db.Column(db.String(50), default="Applied") # Applied, Interview, Rejected
     match_score = db.Column(db.Integer, nullable=True)
     applied_at = db.Column(db.DateTime, server_default=db.func.now())
+
+class SavedJob(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    job_id = db.Column(db.Integer, db.ForeignKey('job.id'), nullable=False)
+    saved_at = db.Column(db.DateTime, server_default=db.func.now())

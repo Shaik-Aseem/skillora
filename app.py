@@ -5,7 +5,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 
-from models import db, User, Resume, Analysis, Progress, Job, JobApplication
+from models import db, User, Resume, Analysis, Progress, Job, JobApplication, SavedJob
 from utils.pdf_parser import extract_text_from_pdf
 from utils.analyzer import analyze_resume
 from services.job_api import fetch_real_jobs
@@ -46,20 +46,9 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# --- Dummy Data Helpers ---
-class DummyAnalysis:
-    score = 72
-    skills = json.dumps(["Python", "SQL", "FastAPI", "React"])
-    missing_skills = json.dumps(["Machine Learning", "APIs", "System Design"])
-    role = "Software Engineer"
-    is_dummy = True
-
-def get_latest_analysis_or_dummy(user_id):
-    analysis = Analysis.query.filter_by(user_id=user_id).order_by(Analysis.id.desc()).first()
-    if analysis:
-        analysis.is_dummy = False
-        return analysis
-    return DummyAnalysis()
+# --- Global Data Bounds ---
+def get_user_analysis(user_id):
+    return Analysis.query.filter_by(user_id=user_id).order_by(Analysis.id.desc()).first()
 
 # --- Routes ---
 @app.route('/')
@@ -120,7 +109,9 @@ def logout():
 @login_required
 def dashboard():
     user = User.query.get(session['user_id'])
-    analysis = get_latest_analysis_or_dummy(user.id)
+    analysis = get_user_analysis(user.id)
+    if not analysis:
+        return redirect(url_for('upload'))
     
     skills_count = len(json.loads(analysis.skills))
     missing_count = len(json.loads(analysis.missing_skills))
@@ -128,7 +119,6 @@ def dashboard():
     progress = Progress.query.filter_by(user_id=user.id).first()
     completed_len = len(json.loads(progress.completed_tasks)) if progress else 3
 
-    # Derive breakdown dynamically so we don't need a DB migration
     breakdown = {
         'skills_match': analysis.score,
         'keywords': min(analysis.score + 10, 100),
@@ -190,7 +180,9 @@ def upload():
 @login_required
 def skill_gap():
     user = User.query.get(session['user_id'])
-    analysis = get_latest_analysis_or_dummy(user.id)
+    analysis = get_user_analysis(user.id)
+    if not analysis: return redirect(url_for('upload'))
+    
     matched = json.loads(analysis.skills)
     missing = json.loads(analysis.missing_skills)
     return render_template('skill_gap.html', user=user, analysis=analysis, matched=matched, missing=missing, active_page='skill-gap')
@@ -199,30 +191,22 @@ def skill_gap():
 @login_required
 def roadmap():
     user = User.query.get(session['user_id'])
-    analysis = get_latest_analysis_or_dummy(user.id)
+    analysis = get_user_analysis(user.id)
+    if not analysis: return redirect(url_for('upload'))
     
     progress = Progress.query.filter_by(user_id=user.id).first()
-    completed = []
     
-    if hasattr(analysis, 'is_dummy') and analysis.is_dummy:
-        completed = ["Learn Machine Learning"]
-        roadmap_data = [{
-            'week': 'Week 1-2',
-            'title': 'Core missing skills',
-            'tasks': ["Learn Machine Learning", "Learn APIs", "Learn System Design"]
-        }]
-    else:
-        if not progress:
-            progress = Progress(user_id=user.id, completed_tasks='[]')
-            db.session.add(progress)
-            db.session.commit()
-        completed = json.loads(progress.completed_tasks) if progress.completed_tasks else []
-        
-        roadmap_data = []
-        latest_resume = Resume.query.filter_by(user_id=user.id).order_by(Resume.id.desc()).first()
-        if latest_resume:
-            result = analyze_resume(latest_resume.extracted_text, analysis.role)
-            roadmap_data = result['roadmap']
+    if not progress:
+        progress = Progress(user_id=user.id, completed_tasks='[]')
+        db.session.add(progress)
+        db.session.commit()
+    completed = json.loads(progress.completed_tasks) if progress.completed_tasks else []
+    
+    roadmap_data = []
+    latest_resume = Resume.query.filter_by(user_id=user.id).order_by(Resume.id.desc()).first()
+    if latest_resume:
+        result = analyze_resume(latest_resume.extracted_text, analysis.role)
+        roadmap_data = result['roadmap']
             
     return render_template('roadmap.html', user=user, analysis=analysis, roadmap_data=roadmap_data, completed=completed, active_page='roadmap')
 
@@ -244,20 +228,14 @@ def update_progress():
 @login_required
 def suggestions():
     user = User.query.get(session['user_id'])
-    analysis = get_latest_analysis_or_dummy(user.id)
+    analysis = get_user_analysis(user.id)
+    if not analysis: return redirect(url_for('upload'))
     
     suggestions_data = []
-    if hasattr(analysis, 'is_dummy') and analysis.is_dummy:
-        suggestions_data = [
-            "Add a clear Education section with your degree and university.",
-            "Consider learning core Software Engineer skills like Machine Learning, APIs.",
-            "Use strong action verbs such as 'Developed', 'Engineered', and 'Architected'."
-        ]
-    else:
-        latest_resume = Resume.query.filter_by(user_id=user.id).order_by(Resume.id.desc()).first()
-        if latest_resume:
-            result = analyze_resume(latest_resume.extracted_text, analysis.role)
-            suggestions_data = result['suggestions']
+    latest_resume = Resume.query.filter_by(user_id=user.id).order_by(Resume.id.desc()).first()
+    if latest_resume:
+        result = analyze_resume(latest_resume.extracted_text, analysis.role)
+        suggestions_data = result['suggestions']
             
     return render_template('suggestions.html', user=user, analysis=analysis, suggestions=suggestions_data, active_page='suggestions')
 
@@ -265,7 +243,8 @@ def suggestions():
 @login_required
 def download_report():
     user = User.query.get(session['user_id'])
-    analysis = get_latest_analysis_or_dummy(user.id)
+    analysis = get_user_analysis(user.id)
+    if not analysis: return jsonify({'error': 'No profile mapped. Upload resume first.'}), 400
     
     from utils.report_generator import generate_pdf_report
     filepath = generate_pdf_report(analysis.score, analysis.role)
@@ -281,7 +260,8 @@ def download_report():
 def jobs_feed():
     user = User.query.get(session['user_id'])
     
-    analysis = get_latest_analysis_or_dummy(user.id)
+    analysis = get_user_analysis(user.id)
+    if not analysis: return redirect(url_for('upload'))
     user_role = analysis.role if analysis and hasattr(analysis, 'role') and analysis.role else "software engineer"
     user_skills = set(json.loads(analysis.skills)) if analysis and hasattr(analysis, 'skills') and analysis.skills else set()
     
@@ -314,6 +294,7 @@ def jobs_feed():
         total_score = min(total_score, 100)
         
         application = JobApplication.query.filter_by(user_id=user.id, job_id=job_record.id).first()
+        saved = SavedJob.query.filter_by(user_id=user.id, job_id=job_record.id).first()
         
         feed_jobs.append({
             'job': job_record,
@@ -322,7 +303,8 @@ def jobs_feed():
             'req_skills': list(req_skills),
             'match_score': total_score,
             'status': application.status if application else None,
-            'applied': application is not None
+            'applied': application is not None,
+            'saved': saved is not None
         })
     
     feed_jobs.sort(key=lambda x: x['match_score'], reverse=True)
@@ -334,7 +316,8 @@ def apply_job(job_id):
     user = User.query.get(session['user_id'])
     job = Job.query.get_or_404(job_id)
     
-    analysis = get_latest_analysis_or_dummy(user.id)
+    analysis = get_user_analysis(user.id)
+    if not analysis: return jsonify({'error': 'No profile mapped. Upload resume first.'}), 400
     user_skills = set(json.loads(analysis.skills)) if analysis and hasattr(analysis, 'skills') and analysis.skills else set()
     req_skills = set(json.loads(job.required_skills)) if job.required_skills else set()
     matched = user_skills.intersection(req_skills)
@@ -366,6 +349,67 @@ def applications():
     apps_data.sort(key=lambda x: x['applied_at'], reverse=True)
     return render_template('applications.html', user=user, apps_data=apps_data, active_page='applications')
 
+@app.route('/api/save_job/<int:job_id>', methods=['POST'])
+@login_required
+def save_job(job_id):
+    user = User.query.get(session['user_id'])
+    job = Job.query.get_or_404(job_id)
+    
+    existing = SavedJob.query.filter_by(user_id=user.id, job_id=job.id).first()
+    if not existing:
+        saved_record = SavedJob(user_id=user.id, job_id=job.id)
+        db.session.add(saved_record)
+        db.session.commit()
+        return jsonify({'success': True, 'action': 'saved'})
+    else:
+        db.session.delete(existing)
+        db.session.commit()
+        return jsonify({'success': True, 'action': 'unsaved'})
+
+@app.route('/saved_jobs')
+@login_required
+def saved_jobs():
+    user = User.query.get(session['user_id'])
+    analysis = get_user_analysis(user.id)
+    if not analysis: return redirect(url_for('upload'))
+    
+    saved = SavedJob.query.filter_by(user_id=user.id).all()
+    feed_jobs = []
+    
+    # Calculate score metrics for saved jobs iteratively
+    user_skills = set(json.loads(analysis.skills)) if analysis and hasattr(analysis, 'skills') and analysis.skills else set()
+    user_role = analysis.role if analysis and hasattr(analysis, 'role') and analysis.role else "software engineer"
+    
+    for s in saved:
+        job = Job.query.get(s.job_id)
+        req_skills = set(json.loads(job.required_skills)) if job.required_skills else set()
+        matched = user_skills.intersection(req_skills)
+        missing = req_skills - user_skills
+        
+        skill_pct = (len(matched) / len(req_skills)) if len(req_skills) > 0 else 1
+        skill_score = 0.5 * skill_pct
+        role_score = 0.2 if user_role.lower() in job.title.lower() else 0.05
+        desc_words = set(job.description.lower().split())
+        matched_kws = user_skills.intersection(desc_words)
+        kw_score = 0.2 * min((len(matched_kws) / max(len(req_skills), 1)), 1.0)
+        exp_score = 0.1 
+        
+        total_score = int((skill_score + role_score + kw_score + exp_score) * 100)
+        total_score = min(total_score, 100)
+        
+        application = JobApplication.query.filter_by(user_id=user.id, job_id=job.id).first()
+        feed_jobs.append({
+            'job': job,
+            'matched': list(matched),
+            'missing': list(missing),
+            'req_skills': list(req_skills),
+            'match_score': total_score,
+            'status': application.status if application else None,
+            'applied': application is not None,
+            'saved': True
+        })
+    return render_template('saved_jobs.html', user=user, feed_jobs=feed_jobs, active_page='jobs')
+
 @app.route('/api/chat', methods=['POST'])
 @login_required
 def chat_bot():
@@ -373,7 +417,7 @@ def chat_bot():
     msg = data.get('message', '').lower()
     
     user = User.query.get(session['user_id'])
-    analysis = get_latest_analysis_or_dummy(user.id)
+    analysis = get_user_analysis(user.id)
     skills = analysis.skills if analysis and hasattr(analysis, 'skills') else ""
     
     from services.ai_engine import chat_response
