@@ -33,14 +33,17 @@
             <div class="nav-center">
                 <a href="{{ url_for('dashboard') }}"
                     class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">Dashboard</a>
+                <a href="{{ url_for('jobs_feed') }}"
+                    class="nav-link {% if active_page == 'jobs' %}active{% endif %}">Jobs For You <span
+                        style="background:var(--success); color:white; font-size:0.65rem; padding:2px 6px; border-radius:10px; margin-left:4px; vertical-align:middle;">New</span></a>
+                <a href="{{ url_for('applications') }}"
+                    class="nav-link {% if active_page == 'applications' %}active{% endif %}">My Applications</a>
                 <a href="{{ url_for('upload') }}"
                     class="nav-link {% if active_page == 'upload' %}active{% endif %}">Upload</a>
-                <a href="{{ url_for('skill_gap') }}"
-                    class="nav-link {% if active_page == 'skill-gap' %}active{% endif %}">Skill Gap</a>
                 <a href="{{ url_for('roadmap') }}"
                     class="nav-link {% if active_page == 'roadmap' %}active{% endif %}">Roadmap</a>
                 <a href="{{ url_for('suggestions') }}"
-                    class="nav-link {% if active_page == 'suggestions' %}active{% endif %}">Suggestions</a>
+                    class="nav-link {% if active_page == 'suggestions' %}active{% endif %}">Insights</a>
             </div>
 
             <div class="nav-right">
@@ -60,6 +63,27 @@
                 {% block content %}{% endblock %}
             </div>
         </main>
+
+        <!-- AI Chat Assistant -->
+        <div id="ai-chat-widget">
+            <button class="chat-toggle btn-primary" onclick="toggleChat()"><i class="ri-robot-2-line"></i></button>
+            <div class="chat-panel hidden glass-card" id="chat-panel">
+                <div class="chat-header">
+                    <h4>Skillora AI Coach</h4>
+                    <button class="btn-icon" onclick="toggleChat()"><i class="ri-close-line"></i></button>
+                </div>
+                <div class="chat-messages" id="chat-messages">
+                    <p class="ai-msg">Hello! I'm your AI Career assistant. Let's optimize your resume and get you hired
+                        faster!</p>
+                </div>
+                <div class="chat-input-area">
+                    <input type="text" class="glass-input" id="chat-input" placeholder="Ask AI anything..."
+                        onkeypress="if(event.key==='Enter') sendChat()">
+                    <button class="btn btn-primary" onclick="sendChat()"><i class="ri-send-plane-fill"></i></button>
+                </div>
+            </div>
+        </div>
+
     </div>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>

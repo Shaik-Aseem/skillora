@@ -5,7 +5,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 
-from models import db, User, Resume, Analysis, Progress
+from models import db, User, Resume, Analysis, Progress, Job, JobApplication
 from utils.pdf_parser import extract_text_from_pdf
 from utils.analyzer import analyze_resume
 
@@ -22,6 +22,19 @@ db.init_app(app)
 
 with app.app_context():
     db.create_all()
+    
+    # Auto-seed mock jobs
+    if not Job.query.first():
+        dummy_jobs = [
+            {"title": "Software Engineer", "company": "TechNova", "location": "Remote", "salary": "$120k", "description": "Looking for a Python/React developer.", "required_skills": '["Python", "React", "SQL"]'},
+            {"title": "Machine Learning Engineer", "company": "AI Dynamics", "location": "New York, NY", "salary": "$150k", "description": "Build predictive models.", "required_skills": '["Python", "Machine Learning", "TensorFlow", "SQL"]'},
+            {"title": "Data Analyst", "company": "FinData", "location": "Chicago, IL", "salary": "$90k", "description": "Analyze financial data trends.", "required_skills": '["SQL", "Python", "Tableau", "Excel"]'},
+            {"title": "Frontend Developer", "company": "Pixel Web", "location": "San Francisco, CA", "salary": "$110k", "description": "Create stunning user interfaces.", "required_skills": '["Javascript", "React", "CSS", "HTML5"]'},
+            {"title": "Backend Systems Architect", "company": "CloudScale", "location": "Austin, TX", "salary": "$140k", "description": "Design scalable infrastructure.", "required_skills": '["Python", "FastAPI", "Docker", "System Design", "AWS"]'},
+        ]
+        for j in dummy_jobs:
+            db.session.add(Job(**j))
+        db.session.commit()
 
 # --- Auth Decorator ---
 def login_required(f):
@@ -262,6 +275,89 @@ def download_report():
             download_name="Skillora_Career_Report.pdf"
         )
     return jsonify({'error': 'Error generating report'}), 500
+@app.route('/jobs')
+@login_required
+def jobs_feed():
+    user = User.query.get(session['user_id'])
+    jobs = Job.query.all()
+    analysis = get_latest_analysis_or_dummy(user.id)
+    user_skills = set(json.loads(analysis.skills)) if analysis and hasattr(analysis, 'skills') and analysis.skills else set()
+    
+    feed_jobs = []
+    for job in jobs:
+        req_skills = set(json.loads(job.required_skills)) if job.required_skills else set()
+        matched = user_skills.intersection(req_skills)
+        missing = req_skills - user_skills
+        match_score = int((len(matched) / len(req_skills)) * 100) if len(req_skills) > 0 else 100
+        
+        application = JobApplication.query.filter_by(user_id=user.id, job_id=job.id).first()
+        
+        feed_jobs.append({
+            'job': job,
+            'matched': list(matched),
+            'missing': list(missing),
+            'req_skills': list(req_skills),
+            'match_score': match_score,
+            'status': application.status if application else None,
+            'applied': application is not None
+        })
+    feed_jobs.sort(key=lambda x: x['match_score'], reverse=True)
+    return render_template('jobs.html', user=user, feed_jobs=feed_jobs, active_page='jobs')
+
+@app.route('/api/apply/<int:job_id>', methods=['POST'])
+@login_required
+def apply_job(job_id):
+    user = User.query.get(session['user_id'])
+    job = Job.query.get_or_404(job_id)
+    
+    analysis = get_latest_analysis_or_dummy(user.id)
+    user_skills = set(json.loads(analysis.skills)) if analysis and hasattr(analysis, 'skills') and analysis.skills else set()
+    req_skills = set(json.loads(job.required_skills)) if job.required_skills else set()
+    matched = user_skills.intersection(req_skills)
+    match_score = int((len(matched) / len(req_skills)) * 100) if len(req_skills) > 0 else 100
+    
+    existing = JobApplication.query.filter_by(user_id=user.id, job_id=job.id).first()
+    if not existing:
+        app_record = JobApplication(user_id=user.id, job_id=job.id, match_score=match_score)
+        db.session.add(app_record)
+        db.session.commit()
+    
+    return jsonify({'success': True})
+
+@app.route('/applications')
+@login_required
+def applications():
+    user = User.query.get(session['user_id'])
+    apps = JobApplication.query.filter_by(user_id=user.id).all()
+    # Reverse timeline mock
+    apps_data = []
+    for a in apps:
+        job = Job.query.get(a.job_id)
+        apps_data.append({
+            'job': job,
+            'status': a.status,
+            'match_score': a.match_score,
+            'applied_at': a.applied_at.strftime('%B %d, %Y') if a.applied_at else "Recently"
+        })
+    apps_data.sort(key=lambda x: x['applied_at'], reverse=True)
+    return render_template('applications.html', user=user, apps_data=apps_data, active_page='applications')
+
+@app.route('/api/chat', methods=['POST'])
+@login_required
+def chat_bot():
+    data = request.json
+    msg = data.get('message', '').lower()
+    
+    reply = "I'm your AI Career Coach. I can analyze your resume, suggest skills, or help match you to roles!"
+    if "skills" in msg or "learn" in msg:
+         reply = "Based on current market demand, I highly recommend expanding into modern frameworks like React and Cloud architecture (AWS/Docker)."
+    elif "improve" in msg or "resume" in msg:
+         reply = "Pro tip: Convert passive statements into actionable achievements. Replace 'Helped with a website' to 'Engineered a full-stack platform decreasing latency by 20%'."
+    elif "rejected" in msg or "not getting" in msg:
+         reply = "ATS engines act as strict keyword filters. Always match your resume's terminology exactly to the job description keywords for the highest conversion probability."
+         
+    return jsonify({'reply': reply})
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)

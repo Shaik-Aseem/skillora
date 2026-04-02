@@ -179,4 +179,84 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 1200);
         });
     }
+    /* --- AI CHATBOT LOGIC --- */
+    window.toggleChat = function () {
+        const panel = document.getElementById('chat-panel');
+        if (panel) panel.classList.toggle('active');
+    };
+
+    window.sendChat = function () {
+        const input = document.getElementById('chat-input');
+        const msgs = document.getElementById('chat-messages');
+        const val = input.value.trim();
+        if (!val) return;
+
+        msgs.insertAdjacentHTML('beforeend', `<p class="user-msg">${val}</p>`);
+        input.value = '';
+        msgs.scrollTop = msgs.scrollHeight;
+
+        fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: val })
+        })
+            .then(r => r.json())
+            .then(d => {
+                msgs.insertAdjacentHTML('beforeend', `<p class="ai-msg">${d.reply}</p>`);
+                msgs.scrollTop = msgs.scrollHeight;
+            });
+    };
+
+    /* --- PARALLAX & CURSOR GLOW --- */
+    const cursorGlow = document.getElementById('cursor-glow');
+    const parallaxBg = document.getElementById('bg-parallax');
+    let mX = window.innerWidth / 2, mY = window.innerHeight / 2;
+    let cX = mX, cY = mY;
+
+    document.addEventListener('mousemove', (e) => {
+        mX = e.clientX; mY = e.clientY;
+
+        if (parallaxBg) {
+            const xOffset = ((mX / window.innerWidth) - 0.5) * -20;
+            const yOffset = ((mY / window.innerHeight) - 0.5) * -20;
+            parallaxBg.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
+        }
+    });
+
+    const animateCursor = () => {
+        const diffX = mX - cX;
+        const diffY = mY - cY;
+        cX += diffX * 0.15;
+        cY += diffY * 0.15;
+
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        if (cursorGlow) {
+            cursorGlow.style.left = `${cX}px`;
+            cursorGlow.style.top = `${cY}px`;
+            cursorGlow.style.background = isDark ? `radial-gradient(circle, rgba(168,85,247,0.8) 0%, transparent 70%)`
+                : `radial-gradient(circle, rgba(99,102,241,0.6) 0%, transparent 70%)`;
+        }
+        requestAnimationFrame(animateCursor);
+    };
+    animateCursor();
+
+    /* --- MAGNETIC PHYSICS --- */
+    document.querySelectorAll('.btn, .btn-icon').forEach(btn => {
+        btn.classList.add('magnetic');
+        btn.addEventListener('mousemove', (e) => {
+            const rect = btn.getBoundingClientRect();
+            const x = e.clientX - rect.left - rect.width / 2;
+            const y = e.clientY - rect.top - rect.height / 2;
+            btn.style.transform = `translate(${x * 0.2}px, ${y * 0.2}px) scale(1.05)`;
+            if (cursorGlow) {
+                cursorGlow.style.width = '600px'; cursorGlow.style.height = '600px'; cursorGlow.style.opacity = '0.3';
+            }
+        });
+        btn.addEventListener('mouseleave', () => {
+            btn.style.transform = `translate(0px, 0px) scale(1)`;
+            if (cursorGlow) {
+                cursorGlow.style.width = '400px'; cursorGlow.style.height = '400px'; cursorGlow.style.opacity = '0.15';
+            }
+        });
+    });
 });

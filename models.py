@@ -12,6 +12,7 @@ class User(db.Model):
     resumes = db.relationship('Resume', backref='user', lazy=True)
     analyses = db.relationship('Analysis', backref='user', lazy=True)
     progress = db.relationship('Progress', backref='user', lazy=True)
+    applications = db.relationship('JobApplication', backref='user', lazy=True)
 
 class Resume(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -31,3 +32,21 @@ class Progress(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     completed_tasks = db.Column(db.Text, default="[]") # JSON string
+
+class Job(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(150), nullable=False)
+    company = db.Column(db.String(150), nullable=False)
+    location = db.Column(db.String(150), nullable=False)
+    salary = db.Column(db.String(100), nullable=True)
+    description = db.Column(db.Text, nullable=False)
+    required_skills = db.Column(db.Text, nullable=False) # JSON string
+    matches = db.relationship('JobApplication', backref='job', lazy=True)
+
+class JobApplication(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    job_id = db.Column(db.Integer, db.ForeignKey('job.id'), nullable=False)
+    status = db.Column(db.String(50), default="Applied") # Applied, Interview, Rejected
+    match_score = db.Column(db.Integer, nullable=True)
+    applied_at = db.Column(db.DateTime, server_default=db.func.now())

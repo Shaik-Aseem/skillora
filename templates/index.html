@@ -16,22 +16,29 @@
         const savedTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-theme', savedTheme);
     </script>
+    <div class="bg-container"></div>
+    <div class="bg-parallax" id="bg-parallax">
+        <div class="glow-layer-1"></div>
+        <div class="glow-layer-2"></div>
+    </div>
+    <div id="cursor-glow"></div>
+
     <div class="landing-container fade-in-up">
         <div style="text-align: center;">
             <h1
-                style="font-size: 4rem; font-weight: 800; letter-spacing:-1px; line-height: 1.2; margin-bottom: 0.5rem; background: linear-gradient(to right, var(--primary), #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                Skillora
+                style="font-size: 5rem; font-weight: 800; letter-spacing:-2px; line-height: 1.1; margin-bottom: 0.5rem; background: linear-gradient(to right, var(--text), var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                Get Hired Smarter <br>with AI
             </h1>
-            <p style="font-size: 1.25rem; opacity: 0.8; margin-bottom: 2.5rem; font-weight:500;">AI-Powered Career
-                Intelligence</p>
+            <p style="font-size: 1.25rem; opacity: 0.8; margin-bottom: 2.5rem; font-weight:500;">Your Intelligent Career
+                OS</p>
 
             <div class="glass-card hover-lift"
                 style="padding: 3rem; max-width: 500px; margin: 0 auto; display: flex; gap: 1rem; justify-content: center; flex-direction:column; align-items:center;">
-                <p style="margin-bottom: 1.5rem; line-height:1.6; opacity:0.9;">Analyze. Improve. Get Hired.<br>Your
-                    premium toolkit for career growth.</p>
+                <p style="margin-bottom: 1.5rem; line-height:1.6; opacity:0.9;">Stop applying blindly. Let our ATS
+                    Engine match your resume against real roles and simulate recruiter insights.</p>
                 <div style="display: flex; gap:1rem; width:100%;">
-                    <a href="{{ url_for('login') }}" class="btn btn-large w-100"
-                        style="background:var(--card); color:var(--text); border:1px solid var(--glass-border);">Login</a>
+                    <a href="{{ url_for('login') }}" class="btn btn-secondary btn-large w-100"
+                        style="color:var(--text); border:1px solid var(--glass-border);">Login</a>
                     <a href="{{ url_for('signup') }}" class="btn btn-primary btn-large w-100">Signup <i
                             class="ri-arrow-right-line"></i></a>
                 </div>
