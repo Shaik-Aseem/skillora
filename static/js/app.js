@@ -185,24 +185,27 @@ document.addEventListener('DOMContentLoaded', () => {
         if (panel) panel.classList.toggle('active');
     };
 
-    window.sendChat = function () {
+    let chatHistory = [];
+    window.sendMessage = () => {
         const input = document.getElementById('chat-input');
         const msgs = document.getElementById('chat-messages');
         const val = input.value.trim();
         if (!val) return;
 
         msgs.insertAdjacentHTML('beforeend', `<p class="user-msg">${val}</p>`);
+        chatHistory.push({ sender: "user", text: val });
         input.value = '';
         msgs.scrollTop = msgs.scrollHeight;
 
         fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: val })
+            body: JSON.stringify({ message: val, history: chatHistory })
         })
             .then(r => r.json())
             .then(d => {
                 msgs.insertAdjacentHTML('beforeend', `<p class="ai-msg">${d.reply}</p>`);
+                chatHistory.push({ sender: "ai", text: d.reply });
                 msgs.scrollTop = msgs.scrollHeight;
             });
     };

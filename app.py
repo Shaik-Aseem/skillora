@@ -293,6 +293,13 @@ def jobs_feed():
         total_score = int((skill_score + role_score + kw_score + exp_score) * 100)
         total_score = min(total_score, 100)
         
+        if total_score < 20: 
+            continue
+            
+        explanation = f"You match {total_score}% because you have {', '.join(list(matched)[:3])}" if len(matched) else "You're missing core targeted skills."
+        if len(missing) > 0:
+            explanation += f", but lack {', '.join(list(missing)[:2])}."
+        
         application = JobApplication.query.filter_by(user_id=user.id, job_id=job_record.id).first()
         saved = SavedJob.query.filter_by(user_id=user.id, job_id=job_record.id).first()
         
@@ -302,6 +309,7 @@ def jobs_feed():
             'missing': list(missing),
             'req_skills': list(req_skills),
             'match_score': total_score,
+            'match_explanation': explanation,
             'status': application.status if application else None,
             'applied': application is not None,
             'saved': saved is not None
@@ -397,6 +405,10 @@ def saved_jobs():
         total_score = int((skill_score + role_score + kw_score + exp_score) * 100)
         total_score = min(total_score, 100)
         
+        explanation = f"You match {total_score}% because you have {', '.join(list(matched)[:3])}" if len(matched) else "You're missing core targeted skills."
+        if len(missing) > 0:
+            explanation += f", but lack {', '.join(list(missing)[:2])}."
+        
         application = JobApplication.query.filter_by(user_id=user.id, job_id=job.id).first()
         feed_jobs.append({
             'job': job,
@@ -404,6 +416,7 @@ def saved_jobs():
             'missing': list(missing),
             'req_skills': list(req_skills),
             'match_score': total_score,
+            'match_explanation': explanation,
             'status': application.status if application else None,
             'applied': application is not None,
             'saved': True
@@ -415,13 +428,14 @@ def saved_jobs():
 def chat_bot():
     data = request.json
     msg = data.get('message', '').lower()
+    history = data.get('history', [])
     
     user = User.query.get(session['user_id'])
     analysis = get_user_analysis(user.id)
     skills = analysis.skills if analysis and hasattr(analysis, 'skills') else ""
     
     from services.ai_engine import chat_response
-    reply = chat_response(msg, skills)
+    reply = chat_response(msg, skills, history)
          
     return jsonify({'reply': reply})
 

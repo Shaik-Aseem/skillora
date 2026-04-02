@@ -50,8 +50,13 @@ def suggest_improvements(text):
         "Remove passive language and replace with strong action verbs (Architected, Spearheaded)."
     ]
 
-def chat_response(user_msg, user_skills=""):
-    prompt = f"User asks: '{user_msg}'. User's known skills: {user_skills}. Answer in 2 short, helpful sentences as a career coach."
+def chat_response(user_msg, user_skills="", history=None):
+    if history is None:
+        history = []
+    
+    # Compress last 4 messages logically
+    hist_str = "\n".join([f"{m.get('sender', 'user')}: {m.get('text', '')}" for m in history[-4:]])
+    prompt = f"Chat Context:\n{hist_str}\n\nUser asks: '{user_msg}'. User's known skills: {user_skills}. Answer in 2 short, helpful sentences as a career coach."
     return get_ai_response(prompt, "You are Skillora, an AI Career Coach. Be friendly, concise, and professional.")
 
 def _mock_ai_response(prompt):
