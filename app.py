@@ -41,8 +41,15 @@ with app.app_context():
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
+        user_id = session.get('user_id')
+        if not user_id:
             return redirect(url_for('login'))
+            
+        user = db.session.get(User, user_id)
+        if not user:
+            session.clear()
+            return redirect(url_for('login'))
+            
         return f(*args, **kwargs)
     return decorated_function
 
@@ -108,7 +115,10 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session.get('user_id'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
     analysis = get_user_analysis(user.id)
     if not analysis:
         return redirect(url_for('upload'))
@@ -134,7 +144,10 @@ def dashboard():
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
 def upload():
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session.get('user_id'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
     if request.method == 'POST':
         if 'resume' not in request.files:
             return jsonify({'error': 'No file uploaded'})
@@ -179,7 +192,10 @@ def upload():
 @app.route('/skill-gap')
 @login_required
 def skill_gap():
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session.get('user_id'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
     analysis = get_user_analysis(user.id)
     if not analysis: return redirect(url_for('upload'))
     
@@ -190,7 +206,10 @@ def skill_gap():
 @app.route('/roadmap')
 @login_required
 def roadmap():
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session.get('user_id'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
     analysis = get_user_analysis(user.id)
     if not analysis: return redirect(url_for('upload'))
     
@@ -213,7 +232,10 @@ def roadmap():
 @app.route('/api/update_progress', methods=['POST'])
 @login_required
 def update_progress():
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session.get('user_id'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
     completed_tasks = request.json.get('completed_tasks', [])
     progress = Progress.query.filter_by(user_id=user.id).first()
     if progress:
@@ -227,7 +249,10 @@ def update_progress():
 @app.route('/suggestions')
 @login_required
 def suggestions():
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session.get('user_id'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
     analysis = get_user_analysis(user.id)
     if not analysis: return redirect(url_for('upload'))
     
@@ -242,7 +267,10 @@ def suggestions():
 @app.route('/api/download_report', methods=['GET'])
 @login_required
 def download_report():
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session.get('user_id'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
     analysis = get_user_analysis(user.id)
     if not analysis: return jsonify({'error': 'No profile mapped. Upload resume first.'}), 400
     
@@ -258,7 +286,10 @@ def download_report():
 @app.route('/jobs')
 @login_required
 def jobs_feed():
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session.get('user_id'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
     
     analysis = get_user_analysis(user.id)
     if not analysis: return redirect(url_for('upload'))
@@ -299,7 +330,10 @@ def jobs_feed():
 @app.route('/api/apply/<int:job_id>', methods=['POST'])
 @login_required
 def apply_job(job_id):
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session.get('user_id'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
     job = Job.query.get_or_404(job_id)
     
     analysis = get_user_analysis(user.id)
@@ -320,7 +354,10 @@ def apply_job(job_id):
 @app.route('/applications')
 @login_required
 def applications():
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session.get('user_id'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
     apps = JobApplication.query.filter_by(user_id=user.id).all()
     # Reverse timeline mock
     apps_data = []
@@ -338,7 +375,10 @@ def applications():
 @app.route('/api/save_job/<int:job_id>', methods=['POST'])
 @login_required
 def save_job(job_id):
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session.get('user_id'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
     job = Job.query.get_or_404(job_id)
     
     existing = SavedJob.query.filter_by(user_id=user.id, job_id=job.id).first()
@@ -355,7 +395,10 @@ def save_job(job_id):
 @app.route('/saved_jobs')
 @login_required
 def saved_jobs():
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session.get('user_id'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
     analysis = get_user_analysis(user.id)
     if not analysis: return redirect(url_for('upload'))
     
@@ -387,7 +430,10 @@ def chat_bot():
     msg = data.get('message', '').lower()
     history = data.get('history', [])
     
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session.get('user_id'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
     analysis = get_user_analysis(user.id)
     skills = analysis.skills if analysis and hasattr(analysis, 'skills') else ""
     role = analysis.role if analysis and hasattr(analysis, 'role') else ""
