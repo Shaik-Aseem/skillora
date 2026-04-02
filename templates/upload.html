@@ -1,0 +1,33 @@
+{% extends "base_dashboard.html" %}
+{% block title %}Upload - Skillora{% endblock %}
+{% block heading %}Upload Document{% endblock %}
+
+{% block content %}
+<div class="glass-card p-4 text-center hover-lift" style="max-width: 600px; margin: 0 auto; padding: 4rem 3rem;">
+    <h2 class="mb-4" style="font-size:1.8rem;">Upload your PDF Resume</h2>
+    <div class="form-group" style="text-align: left; margin-bottom: 2rem;">
+        <label>Target Role for Analysis <span class="text-danger">*</span></label>
+        <select id="role-select" class="glass-input" style="font-size:1.1rem; padding: 1rem;">
+            <option value="Software Engineer">Software Engineer</option>
+            <option value="Data Analyst">Data Analyst</option>
+            <option value="AIML Engineer">AIML Engineer</option>
+        </select>
+    </div>
+
+    <input type="file" id="resumeInput" accept=".pdf" hidden>
+    <div id="uploadBox" class="upload-area">
+        <i class="ri-file-upload-line" style="font-size: 3.5rem; color: #4f46e5;"></i>
+        <h3 class="mt-3">Click or drag to upload</h3>
+        <p class="opacity-70 mt-2 text-sm">Only Standard PDF files are supported</p>
+    </div>
+
+    <div id="upload-progress" class="hidden mt-4"
+        style="padding: 2rem; background:rgba(79, 70, 229, 0.05); border-radius:12px;">
+        <i class="ri-loader-4-line ri-spin text-primary" style="font-size: 2rem;"></i>
+        <p class="mb-3 mt-2" style="font-weight:600;">Analyzing your document logic...</p>
+        <div class="progress-bar-container">
+            <div class="progress-bar bg-primary" id="upload-progress-bar" style="width: 0%"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}

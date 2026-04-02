@@ -1,0 +1,48 @@
+{% extends "base_dashboard.html" %}
+{% block title %}Learning Roadmap{% endblock %}
+
+{% block content %}
+{% if analysis %}
+<div class="glass-card p-4">
+    <h2>Personalized Roadmap <span class="opacity-70" style="font-size:1rem;font-weight:400;">for {{ analysis.role
+            }}</span></h2>
+
+    <div class="mt-4 mb-4">
+        <div class="flex-between mb-2">
+            <span class="text-sm font-medium">Completion Progress</span>
+            <span class="text-sm text-accent" id="roadmap-pct">0%</span>
+        </div>
+        <div class="progress-bar-container" style="height: 8px;">
+            <div class="progress-bar bg-accent" id="roadmap-progress" style="width: 0%"></div>
+        </div>
+    </div>
+
+    <div class="timeline mt-5">
+        {% if roadmap_data %}
+        {% for week in roadmap_data %}
+        <div class="timeline-item fade-in" style="animation-delay: {{ loop.index0 * 0.15 }}s">
+            <div class="glass-card roadmap-card">
+                <h4>{{ week.week }}: {{ week.title }}</h4>
+                <div class="tasks mt-2">
+                    {% for task in week.tasks %}
+                    <div class="task-item {% if task in completed %}checked{% endif %}" data-task="{{ task|escape }}">
+                        <div class="custom-cb"><i class="ri-check-line"></i></div>
+                        <span class="task-text text-sm" style="font-weight:500;">{{ task }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p>You already have a great set of skills for this role! No specific roadmap generated.</p>
+        {% endif %}
+    </div>
+</div>
+{% else %}
+<div class="glass-card p-4 text-center">
+    <p>Please upload a resume first to generate a learning roadmap.</p>
+    <a href="{{ url_for('upload') }}" class="btn btn-primary mt-3">Upload Now</a>
+</div>
+{% endif %}
+{% endblock %}

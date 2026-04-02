@@ -1,0 +1,105 @@
+{% extends "base_dashboard.html" %}
+{% block title %}Dashboard - Skillora{% endblock %}
+{% block heading %}Dashboard{% endblock %}
+
+{% block content %}
+{% if analysis %}
+<div class="dashboard-grid">
+    <div class="glass-card stat-card hover-lift score-card text-center" style="align-items:center;">
+        <h3 class="mb-2">ATS Score</h3>
+        <div class="circular-score">
+            {{ analysis.score }}
+        </div>
+    </div>
+
+    <div class="glass-card stat-card hover-lift skills-card">
+        <h3><i class="ri-check-line text-success"></i> Skills Detected</h3>
+        <div class="score-display">
+            <span class="score-number text-success">{{ skills_count }}</span>
+        </div>
+        <p class="text-sm opacity-70 mt-2">from target profile</p>
+    </div>
+
+    <div class="glass-card stat-card hover-lift missing-card">
+        <h3><i class="ri-close-line text-danger"></i> Missing Skills</h3>
+        <div class="score-display">
+            <span class="score-number text-danger">{{ missing_count }}</span>
+        </div>
+        <p class="text-sm opacity-70 mt-2">needs improvement</p>
+    </div>
+
+    <div class="glass-card stat-card hover-lift" style="border-left: 5px solid var(--text);">
+        <h3>Mini Analytics</h3>
+        <p class="text-sm opacity-70 mt-3 mb-2">Matched vs Missing</p>
+        <div class="mini-bar">
+            {% set total = skills_count + missing_count %}
+            {% set pct = 0 %}
+            {% if total > 0 %}{% set pct = (skills_count / total) * 100 %}{% endif %}
+            <div class="mini-bar-fill bg-primary" style="width:{{ pct }}%"></div>
+        </div>
+        <p class="text-sm mt-2 font-medium" style="text-align:right;">{{ pct|round|int }}% Match</p>
+    </div>
+</div>
+
+<!-- New Breakdown Section -->
+<div class="mt-4 glass-card p-4 hover-lift">
+    <h3 class="mb-4">ATS Breakdown</h3>
+    <div class="grid-2">
+        <div>
+            <div class="flex-between mb-2">
+                <span class="text-sm font-medium">Skill Match</span>
+                <span class="text-sm font-medium">{{ breakdown.skills_match }}%</span>
+            </div>
+            <div class="progress-bar-container mb-4">
+                <div class="progress-bar" style="background:#4f46e5;" data-target-width="{{ breakdown.skills_match }}%">
+                </div>
+            </div>
+
+            <div class="flex-between mb-2">
+                <span class="text-sm font-medium">Keyword Score</span>
+                <span class="text-sm font-medium">{{ breakdown.keywords }}%</span>
+            </div>
+            <div class="progress-bar-container mb-4">
+                <div class="progress-bar" style="background:#10b981;" data-target-width="{{ breakdown.keywords }}%">
+                </div>
+            </div>
+        </div>
+        <div>
+            <div class="flex-between mb-2">
+                <span class="text-sm font-medium">Formatting</span>
+                <span class="text-sm font-medium">{{ breakdown.formatting }}%</span>
+            </div>
+            <div class="progress-bar-container mb-4">
+                <div class="progress-bar" style="background:#f59e0b;" data-target-width="{{ breakdown.formatting }}%">
+                </div>
+            </div>
+
+            <div class="flex-between mb-2">
+                <span class="text-sm font-medium">Experience Mention</span>
+                <span class="text-sm font-medium">{{ breakdown.experience }}%</span>
+            </div>
+            <div class="progress-bar-container mb-4">
+                <div class="progress-bar" style="background:#ef4444;" data-target-width="{{ breakdown.experience }}%">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4 glass-card p-4 hover-lift">
+    <h3>Quick Actions</h3>
+    <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+        <a href="{{ url_for('skill_gap') }}" class="btn btn-primary">View Skill Gap</a>
+        <a href="{{ url_for('roadmap') }}" class="btn btn-secondary">Continue Roadmap</a>
+        <a href="/api/download_report" class="btn btn-primary">Download Report <i class="ri-download-2-line"></i></a>
+    </div>
+</div>
+{% else %}
+<div class="glass-card p-4 text-center">
+    <h2>Welcome to Skillora, {{ user.name }}!</h2>
+    <p class="opacity-70 mt-2 mb-4">You haven't uploaded a resume yet. Let's get started analyzing your skills.</p>
+    <a href="{{ url_for('upload') }}" class="btn btn-primary btn-large"><i class="ri-upload-cloud-line"></i> Upload
+        Resume</a>
+</div>
+{% endif %}
+{% endblock %}

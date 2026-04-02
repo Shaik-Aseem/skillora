@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Signup - Skillora</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <script>
+        document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
+    </script>
+    <div class="auth-container fade-in">
+        <div class="glass-card auth-card hover-lift">
+            <h1
+                style="font-weight: 800; font-size:2rem; letter-spacing:-0.5px; margin-bottom:0.5rem; color:var(--primary);">
+                Skillora</h1>
+            <p class="mb-4 opacity-70">Create your premium account</p>
+
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            {% for message in messages %}
+            <div class="alert">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <form action="{{ url_for('signup') }}" method="POST">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" name="name" class="glass-input" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" name="email" class="glass-input" required>
+                </div>
+                <div class="form-group mb-4">
+                    <label>Password</label>
+                    <input type="password" name="password" class="glass-input" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 btn-large">Sign Up</button>
+            </form>
+            <p class="mt-4 opacity-70">Already have an account? <a href="{{ url_for('login') }}" class="text-primary"
+                    style="text-decoration:none; font-weight:600;">Log in</a></p>
+        </div>
+    </div>
+</body>
+
+</html>

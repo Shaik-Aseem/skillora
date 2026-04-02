@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skillora</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+</head>
+
+<body>
+    <script>
+        document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
+    </script>
+
+    <div class="bg-container"></div>
+    <div class="bg-parallax" id="bg-parallax">
+        <div class="glow-layer-1"></div>
+        <div class="glow-layer-2"></div>
+    </div>
+    <div id="cursor-glow"></div>
+
+    <div class="stripe-layout fade-in-up" style="--stagger: 0;">
+        <!-- Top Navbar -->
+        <nav class="stripe-nav">
+            <div class="nav-left">
+                <a href="{{ url_for('dashboard') }}" class="nav-brand">Skillora</a>
+                <span class="nav-tagline">AI Career Intelligence</span>
+            </div>
+
+            <div class="nav-center">
+                <a href="{{ url_for('dashboard') }}"
+                    class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">Dashboard</a>
+                <a href="{{ url_for('upload') }}"
+                    class="nav-link {% if active_page == 'upload' %}active{% endif %}">Upload</a>
+                <a href="{{ url_for('skill_gap') }}"
+                    class="nav-link {% if active_page == 'skill-gap' %}active{% endif %}">Skill Gap</a>
+                <a href="{{ url_for('roadmap') }}"
+                    class="nav-link {% if active_page == 'roadmap' %}active{% endif %}">Roadmap</a>
+                <a href="{{ url_for('suggestions') }}"
+                    class="nav-link {% if active_page == 'suggestions' %}active{% endif %}">Suggestions</a>
+            </div>
+
+            <div class="nav-right">
+                <button id="theme-toggle" class="btn-icon theme-btn" title="Toggle Theme">
+                    <i class="ri-moon-line"></i>
+                </button>
+                <a href="{{ url_for('logout') }}" class="btn btn-logout"><i class="ri-logout-box-r-line"></i> Logout</a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="views-container">
+            <div class="view fade-in">
+                <div style="margin-bottom: 2rem;">
+                    <h1 class="page-title">{% block heading %}Overview{% endblock %}</h1>
+                </div>
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+
+</html>

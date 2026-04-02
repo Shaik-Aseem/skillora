@@ -1,0 +1,48 @@
+{% extends "base_dashboard.html" %}
+{% block title %}Skill Gap Analysis{% endblock %}
+
+{% block content %}
+{% if analysis %}
+<div class="glass-card p-4 hover-lift">
+    <div class="flex-between mb-4">
+        <h2>Comparison vs <span class="text-primary">{{ analysis.role }}</span></h2>
+        <a href="{{ url_for('upload') }}" class="btn btn-icon"><i class="ri-refresh-line"></i></a>
+    </div>
+    <div class="grid-2 mt-4">
+        <div>
+            <h3 class="text-success mb-3"><i class="ri-check-line"></i> Matched Skills</h3>
+            <div class="tags-container mt-2">
+                {% if matched %}
+                {% for skill in matched %}
+                <div class="tag matched"
+                    title="Great job emphasizing your expertise here. This skill critically validates your match for this role.">
+                    <i class="ri-check-line"></i> {{ skill }}</div>
+                {% endfor %}
+                {% else %}
+                <p class="opacity-70 text-sm">No exact skills matched</p>
+                {% endif %}
+            </div>
+        </div>
+        <div>
+            <h3 class="text-danger mb-3"><i class="ri-close-line"></i> Missing Skills</h3>
+            <div class="tags-container mt-2">
+                {% if missing %}
+                {% for skill in missing %}
+                <div class="tag missing"
+                    title="This is frequently expected for the {{ analysis.role }} position. Considering adding projects using this!">
+                    <i class="ri-close-line"></i> {{ skill }}</div>
+                {% endfor %}
+                {% else %}
+                <p class="opacity-70 text-sm">No missing skills detected! Great job.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="glass-card p-4 text-center">
+    <p>Please upload a resume first to see the skill gap analysis.</p>
+    <a href="{{ url_for('upload') }}" class="btn btn-primary mt-3">Upload Now</a>
+</div>
+{% endif %}
+{% endblock %}
