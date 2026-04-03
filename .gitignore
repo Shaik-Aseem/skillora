@@ -1,5 +1,11 @@
-venv/
+.venv/
 __pycache__/
 *.pyc
+*.pyd
+*.pyo
+*.db
 .env
+node_modules/
+dist/
+build/
 instance/
